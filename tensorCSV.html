@@ -9,7 +9,8 @@
 
     <!-- สร้าง input สำหรับอัปโหลดไฟล์ CSV -->
     <input type="file" id="csvFileInput" accept=".csv" />
-    
+    <div id="result"></div>
+    <a id="downloadLink" style="display: none;">Download Model</a>
 
     <script>
         // ฟังก์ชันสำหรับแสดงผลลัพธ์
@@ -21,6 +22,10 @@
                 console.error("Element with id 'result' not found.");
             }
         }
+        
+        // ประกาศตัวแปร model1 และ model2 ให้เป็นตัวแปรระดับกว้าง (global scope)
+        let model1;
+        let model2;
 
         // ฟังก์ชันสำหรับอ่านไฟล์ CSV และเตรียมข้อมูล
         async function processCSV() {
@@ -84,35 +89,48 @@
             const dense1 = tf.layers.dense({ units: 64, activation: 'relu' }).apply(input1);
             const dense2 = tf.layers.dense({ units: 32, activation: 'relu' }).apply(dense1);
             const output1 = tf.layers.dense({ units: 3 }).apply(dense2);
-            const model1 = tf.model({ inputs: input1, outputs: output1 });
-
+            model1 = tf.model({ inputs: input1, outputs: output1 });
+        
             // สร้างโมเดล neural network 2
             const input2 = tf.input({ shape: [4] });
             const dense3 = tf.layers.dense({ units: 64, activation: 'relu' }).apply(input2);
             const dense4 = tf.layers.dense({ units: 32, activation: 'relu' }).apply(dense3);
             const output2 = tf.layers.dense({ units: 3 }).apply(dense4);
-            const model2 = tf.model({ inputs: input2, outputs: output2 });
-
+            model2 = tf.model({ inputs: input2, outputs: output2 });
+        
             // รวมชั้นและคอมไพล์โมเดล 1
             model1.compile({ loss: 'meanSquaredError', optimizer: 'sgd' });
-
-            // รวมชั้นและคอมไพล์โมเดล 2
-            model2.compile({ loss: 'meanSquaredError', optimizer: 'sgd' });
 
             // ฝึกโมเดลด้วยข้อมูล 1
             model1.fit(xTrain1, yTrain1, { epochs: 100 }).then(() => {
                 displayResult('Model 1 training completed');
+                
+                // หลังจากการฝึกโมเดลด้วยข้อมูล 1 ให้ทำการบันทึกโมเดล
+                saveModel(model1);
             });
+
+            // รวมชั้นและคอมไพล์โมเดล 2
+            model2.compile({ loss: 'meanSquaredError', optimizer: 'sgd' });
 
             // ฝึกโมเดลด้วยข้อมูล 2
             model2.fit(xTrain2, yTrain2, { epochs: 100 }).then(() => {
                 displayResult('Model 2 training completed');
+                
+                // หลังจากการฝึกโมเดลด้วยข้อมูล 2 ให้ทำการบันทึกโมเดล
+                saveModel(model2);
             });
         }
 
         // เมื่อไฟล์ CSV ถูกเลือกและอัปโหลด
         const fileInput = document.getElementById('csvFileInput');
         fileInput.addEventListener('change', processCSV);
+
+        // ฟังก์ชันสำหรับบันทึกโมเดลในรูปแบบ SavedModel
+        async function saveModel(model) {
+            const modelSaveResults = await model.save('downloads://my-model'); // บันทึกไปยังเบราวเซอร์
+            console.log(modelSaveResults);
+        }
+
     </script>
 </body>
 </html>
